@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -e
+
+if [ "$CC" = "" ]; then
+    if cc -v 2>/dev/null; then
+        CC=cc
+    elif gcc -v 2>/dev/null; then
+        CC=gcc
+    else
+        echo "error: unable to find a C compiler"
+        exit 1
+    fi
+fi
+echo CC is $CC    
+
+libportal_version="0"
+
+wanted_pkgs="libpipewire-0.3 libportal"
+found_pkgs=""
+for pkg in $wanted_pkgs; do
+    version=$(pkg-config --modversion $pkg 2>/dev/null || echo "missing")
+    if [ "$version" = "missing" ]; then
+        echo "WARNING: missing package '$pkg'"
+    else
+        echo "Found Package '$pkg' version $version"
+        found_pkgs="$found_pkgs $pkg"
+
+        if [ "$pkg" = "libportal" ]; then
+            libportal_version=$(echo "$version" | awk -F '.' '{print $2}')
+        fi
+    fi
+done
+pkg_flags=$(pkg-config --cflags --libs $found_pkgs)
+
+set -x
+$CC -o example example.c $pkg_flags -DLIBPORTAL_VERSION=$libportal_version
+set +x
+echo Success, run "./example"
+
